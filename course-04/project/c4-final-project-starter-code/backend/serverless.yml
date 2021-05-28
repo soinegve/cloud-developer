@@ -22,7 +22,7 @@ provider:
 
 
   environment: 
-    TODO_TABLE : Todos-${self:provider.stage}
+    TODO_TABLE : TodosV2-${self:provider.stage}
     INDEX_NAME: UserIdx
     IMAGES_S3_BUCKET: images-kuvadakos-${self:provider.stage}
 
@@ -186,19 +186,12 @@ resources:
            - AttributeName: userId
              AttributeType: S           
         KeySchema:
-           - AttributeName: todoId
+           - AttributeName: userId
              KeyType: HASH
+           - AttributeName: todoId
+             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.TODO_TABLE}
-        GlobalSecondaryIndexes:
-         - IndexName: ${self:provider.environment.INDEX_NAME}
-           KeySchema:
-            - AttributeName: userId
-              KeyType: HASH
-            - AttributeName: todoId
-              KeyType: RANGE
-           Projection:
-            ProjectionType: ALL 
 
     AttachmentsBucket:
       Type: AWS::S3::Bucket

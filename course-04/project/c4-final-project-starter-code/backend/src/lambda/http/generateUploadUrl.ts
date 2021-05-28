@@ -4,15 +4,15 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } f
 
 
 import * as AWS from 'aws-sdk'
+import { DynamoDBUtils } from '../../aws/DynamoDBUtil'
+import { getUserId } from '../utils'
 
 const s3 = new AWS.S3({signatureVersion: 'v4'})
 
 const bucketName = process.env.IMAGES_S3_BUCKET
 const urlExpiration = process.env.SIGNED_URL_EXPIRATION
 
-const docClient = new AWS.DynamoDB.DocumentClient()
 
-const todoTable = process.env.TODO_TABLE
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const todoId = event.pathParameters.todoId
@@ -27,20 +27,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
   const imageUrl =  `https://${bucketName}.s3.amazonaws.com/${todoId}`
 
+  
 
-  const updateUrlOnTodo = {
-    TableName: todoTable,
-    Key: { 
-      'todoId': todoId
-       },
-    UpdateExpression: "set attachmentUrl = :a",
-    ExpressionAttributeValues: {
-      ":a": imageUrl,
-    },
-    ReturnValues: "UPDATED_NEW",
-  };
-
-  await docClient.update(updateUrlOnTodo).promise();
+  const userId = getUserId(event)
+  await new DynamoDBUtils().updateToDoUrl(userId,todoId,imageUrl);
   
   return {
 

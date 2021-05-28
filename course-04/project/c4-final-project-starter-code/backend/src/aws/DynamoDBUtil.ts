@@ -1,10 +1,13 @@
 import * as AWS  from 'aws-sdk'
-import * as AWSXRay from 'aws-xray-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { TodoItem } from '../models/TodoItem'
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
 
-AWSXRay.captureAWS(AWS)
+
+const AWSXRay = require('aws-xray-sdk')
+
+
+const XAWS = AWSXRay.captureAWS(AWS)
 
 
 
@@ -12,17 +15,17 @@ export class DynamoDBUtils {
 
 
   constructor(
-        private readonly docClient: DocumentClient = new AWS.DynamoDB.DocumentClient(),
-        private readonly todoTable = process.env.TODO_TABLE,
-        private readonly userIdIndex = process.env.INDEX_NAME) {}
+        private readonly docClient: DocumentClient = new XAWS.DynamoDB.DocumentClient(),
+        private readonly todoTable = process.env.TODO_TABLE) {}
 
-  async updateToDoUrl(todoId: string, imageUrl: string) {
+  async updateToDoUrl(userId: string, todoId: string, imageUrl: string) {
     
     
     const updateUrlOnTodo = {
         TableName: this.todoTable,
         Key: { 
-          'todoId': todoId
+          'todoId': todoId,
+          'userId':userId
            },
         UpdateExpression: "set attachmentUrl = :a",
         ExpressionAttributeValues: {
@@ -35,7 +38,7 @@ export class DynamoDBUtils {
 
 
   }
-  async updateTodo(todoId: string, updatedTodo: UpdateTodoRequest) {
+  async updateTodo(userId: string, todoId: string, updatedTodo: UpdateTodoRequest) {
     
     
     var params = {
@@ -56,7 +59,8 @@ export class DynamoDBUtils {
            }
         }, 
         Key: {
-         "todoId": todoId
+         "todoId": todoId,
+         "userId": userId
         }, 
         ReturnValues: "ALL_NEW", 
         TableName: this.todoTable, 
@@ -70,8 +74,8 @@ export class DynamoDBUtils {
   }
   
   
-  async  delete(todoId: string) {
-       this.docClient.delete({TableName: this.todoTable, Key:{"todoId" : todoId}}).promise()
+  async  delete(todoId: string, userId: string) {
+       this.docClient.delete({TableName: this.todoTable, Key:{"todoId" : todoId,"userId":userId}}).promise()
   }
 
   
@@ -82,7 +86,6 @@ export class DynamoDBUtils {
    
     const result = await this.docClient.query({
         TableName: this.todoTable,
-        IndexName : this.userIdIndex,
         KeyConditionExpression: 'userId = :userId',
         ExpressionAttributeValues: {
           ':userId': userId

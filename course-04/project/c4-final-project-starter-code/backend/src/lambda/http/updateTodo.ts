@@ -4,6 +4,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } f
 
 import { UpdateTodoRequest } from '../../requests/UpdateTodoRequest'
 import { DynamoDBUtils } from '../../aws/DynamoDBUtil'
+import { getUserId } from '../utils'
 
 
 
@@ -11,8 +12,9 @@ import { DynamoDBUtils } from '../../aws/DynamoDBUtil'
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const todoId = event.pathParameters.todoId
   const updatedTodo: UpdateTodoRequest = JSON.parse(event.body)
+  const userId = getUserId(event)
 
-  const result = await new DynamoDBUtils().updateTodo(todoId,updatedTodo)
+  const result = await new DynamoDBUtils().updateTodo(userId, todoId,updatedTodo)
 
 
   return {
