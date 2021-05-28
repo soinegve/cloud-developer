@@ -5,6 +5,8 @@ plugins:
   - serverless-webpack
   - serverless-iam-roles-per-function
   - serverless-reqvalidator-plugin
+  - serverless-aws-documentation
+
 
 provider:
   name: aws
@@ -12,6 +14,11 @@ provider:
 
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
+
+
+  tracing:
+    lambda: true
+    apiGateway: true
 
 
   environment: 
@@ -28,6 +35,23 @@ provider:
         - dynamodb:GetItem
         - dynamodb:UpdateItem
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}
+
+
+
+custom:
+  documentation:
+    api:
+      info:
+        version: v0.0.1
+        title: My Todos
+        description: serverless app
+    models:
+      - name: CreateTodo
+        contentType: application/json
+        schema: ${file(src/schemas/create-todo.json)}
+      - name: UpdateTodo
+        contentType: application/json
+        schema: ${file(src/schemas/update-todo.json)}
 
 functions:
 
@@ -64,6 +88,12 @@ functions:
           path: todos
           cors: true
           authorizer: Auth
+          reqValidatorName: RequestValidator
+          documentation:
+            summary: Create a new Todo
+            description: Create a new Todo
+            requestModels:
+              'application/json': CreateTodo
     iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: Allow
@@ -81,6 +111,12 @@ functions:
           path: todos/{todoId}
           cors: true
           authorizer: Auth
+          reqValidatorName: RequestValidator
+          documentation:
+            summary: Update an existing Todo
+            description: Update an existing Todo
+            requestModels:
+              'application/json': UpdateTodo
     iamRoleStatementsInherit: true
     iamRoleStatements:
       - Effect: Allow
@@ -122,12 +158,24 @@ functions:
           - s3:PutObject
           - s3:GetObject
         Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}
 
 
 resources:
   Resources:
 
-  
+
+    RequestValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
 
     GroupDynamoDBTable:
       Type: AWS::DynamoDB::Table
@@ -147,6 +195,8 @@ resources:
            KeySchema:
             - AttributeName: userId
               KeyType: HASH
+            - AttributeName: todoId
+              KeyType: RANGE
            Projection:
             ProjectionType: ALL 
 
